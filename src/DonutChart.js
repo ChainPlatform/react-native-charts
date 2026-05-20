@@ -13,6 +13,7 @@ class DonutChart extends PureComponent {
                 label: PropTypes.string,
                 value: PropTypes.number,
                 color: PropTypes.string,
+                total: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
             })
         ).isRequired,
         size: PropTypes.number,
@@ -50,15 +51,11 @@ class DonutChart extends PureComponent {
 
     constructor(props) {
         super(props);
-
-        this.state = {
-            tooltip: null,
-        };
+        this.state = { tooltip: null };
     }
 
     polarToCartesian = (cx, cy, radius, angle) => {
         const rad = ((angle - 90) * Math.PI) / 180;
-
         return {
             x: cx + radius * Math.cos(rad),
             y: cy + radius * Math.sin(rad),
@@ -68,7 +65,6 @@ class DonutChart extends PureComponent {
     describeArc = (cx, cy, radius, startAngle, endAngle) => {
         const start = this.polarToCartesian(cx, cy, radius, endAngle);
         const end = this.polarToCartesian(cx, cy, radius, startAngle);
-
         const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
 
         return [
@@ -92,14 +88,53 @@ class DonutChart extends PureComponent {
                 x: point.x,
                 y: point.y,
                 label: item.label,
-                value: item.total,
-                percent: item.value,
+                value: item.total ?? item.value,
+                percent,
                 color: item.color,
             },
         });
     };
 
     hideTooltip = () => { this.setState({ tooltip: null }); };
+
+    renderSegment = ({ item, index, center, radius, strokeWidth, segmentStartAngle, segmentEndAngle, sweepAngle, roundedPercent, percentPoint, arcPath }) => {
+        const eventProps = {
+            onPress: Platform.OS !== 'web' && this.props.enableTooltip ? () => this.showTooltip(item, roundedPercent, percentPoint) : undefined,
+            onPressOut: Platform.OS !== 'web' ? this.hideTooltip : undefined,
+            onMouseEnter: Platform.OS === 'web' && this.props.enableTooltip ? () => this.showTooltip(item, roundedPercent, percentPoint) : undefined,
+            onMouseLeave: Platform.OS === 'web' ? this.hideTooltip : undefined,
+        };
+
+        if (sweepAngle >= 359.99) {
+            return (
+                <Circle
+                    key={`segment-full-${index}`}
+                    cx={center}
+                    cy={center}
+                    r={radius}
+                    stroke={item.color}
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    strokeLinecap="butt"
+                    {...eventProps}
+                />
+            );
+        }
+
+        if (segmentEndAngle <= segmentStartAngle) return null;
+
+        return (
+            <Path
+                key={`segment-path-${index}`}
+                d={arcPath}
+                stroke={item.color}
+                strokeWidth={strokeWidth}
+                fill="transparent"
+                strokeLinecap="butt"
+                {...eventProps}
+            />
+        );
+    };
 
     render() {
         const {
@@ -124,16 +159,11 @@ class DonutChart extends PureComponent {
 
         if (!data?.length) return null;
 
-        const validData = data.filter(
-            item => item?.value && item.value > 0
-        );
+        const validData = data.filter(item => Number(item?.value) > 0);
 
         if (!validData.length) return null;
 
-        const total = validData.reduce(
-            (sum, item) => sum + item.value,
-            0
-        );
+        const total = validData.reduce((sum, item) => sum + Number(item.value || 0), 0);
 
         if (total <= 0) return null;
 
@@ -148,108 +178,46 @@ class DonutChart extends PureComponent {
                     <Circle cx={center} cy={center} r={radius} stroke={backgroundColor} strokeWidth={strokeWidth} fill="transparent" />
 
                     {validData.map((item, index) => {
-                        const percent = item.value / total;
+                        const value = Number(item.value || 0);
+                        const percent = value / total;
                         const sweepAngle = percent * 360;
-
-                        const segmentStartAngle = currentAngle + segmentGap / 2;
-
-                        const segmentEndAngle = currentAngle + sweepAngle - segmentGap / 2;
-
+                        const isFullCircle = sweepAngle >= 359.99;
+                        const gap = isFullCircle ? 0 : segmentGap;
+                        const segmentStartAngle = currentAngle + gap / 2;
+                        const segmentEndAngle = currentAngle + sweepAngle - gap / 2;
                         const middleAngle = currentAngle + sweepAngle / 2;
 
                         currentAngle += sweepAngle;
 
-                        if (segmentEndAngle <= segmentStartAngle) {
-                            return null;
-                        }
-
-                        const arcPath = this.describeArc(
-                            center,
-                            center,
-                            radius,
-                            segmentStartAngle,
-                            segmentEndAngle
-                        );
-
-                        const percentPoint = this.polarToCartesian(
-                            center,
-                            center,
-                            radius,
-                            middleAngle
-                        );
-
-                        const innerPoint = this.polarToCartesian(
-                            center,
-                            center,
-                            radius - strokeWidth / 2 - innerOffset,
-                            middleAngle
-                        );
-
+                        const arcPath = this.describeArc(center, center, radius, segmentStartAngle, segmentEndAngle);
+                        const percentPoint = this.polarToCartesian(center, center, radius, middleAngle);
+                        const innerPoint = this.polarToCartesian(center, center, radius - strokeWidth / 2 - innerOffset, middleAngle);
                         const roundedPercent = Math.round(percent * 100);
 
                         return (
                             <React.Fragment key={`segment-${index}`}>
-                                <Path
-                                    d={arcPath}
-                                    stroke={item.color}
-                                    strokeWidth={strokeWidth}
-                                    fill="transparent"
-                                    strokeLinecap="butt"
-                                    onPress={
-                                        Platform.OS !== 'web' && enableTooltip
-                                            ? () =>
-                                                this.showTooltip(
-                                                    item,
-                                                    roundedPercent,
-                                                    percentPoint
-                                                )
-                                            : undefined
-                                    }
-                                    onPressOut={
-                                        Platform.OS !== 'web'
-                                            ? this.hideTooltip
-                                            : undefined
-                                    }
-                                    onMouseEnter={
-                                        Platform.OS === 'web' && enableTooltip
-                                            ? () =>
-                                                this.showTooltip(
-                                                    item,
-                                                    roundedPercent,
-                                                    percentPoint
-                                                )
-                                            : undefined
-                                    }
-                                    onMouseLeave={
-                                        Platform.OS === 'web'
-                                            ? this.hideTooltip
-                                            : undefined
-                                    }
-                                />
+                                {this.renderSegment({
+                                    item,
+                                    index,
+                                    center,
+                                    radius,
+                                    strokeWidth,
+                                    segmentStartAngle,
+                                    segmentEndAngle,
+                                    sweepAngle,
+                                    roundedPercent,
+                                    percentPoint,
+                                    arcPath,
+                                })}
 
                                 {showPercent && (
-                                    <SvgText
-                                        x={percentPoint.x}
-                                        y={percentPoint.y}
-                                        fill={percentColor}
-                                        fontSize={percentFontSize}
-                                        fontWeight="600"
-                                        textAnchor="middle"
-                                        alignmentBaseline="middle"
-                                    >
+                                    <SvgText x={percentPoint.x} y={percentPoint.y} fill={percentColor} fontSize={percentFontSize} fontWeight="600" textAnchor="middle" alignmentBaseline="middle">
                                         {`${roundedPercent}%`}
                                     </SvgText>
                                 )}
 
-                                {showInnerLabels && (
-                                    <SvgText
-                                        x={innerPoint.x}
-                                        y={innerPoint.y}
-                                        fill={item.color}
-                                        fontSize={labelFontSize}
-                                        textAnchor="middle"
-                                        alignmentBaseline="middle"
-                                    >
+                                {showInnerLabels && !!item.label && (
+                                    <SvgText x={innerPoint.x} y={innerPoint.y} fill={item.color} fontSize={labelFontSize} textAnchor="middle" alignmentBaseline="middle">
                                         {item.label}
                                     </SvgText>
                                 )}
@@ -258,15 +226,7 @@ class DonutChart extends PureComponent {
                     })}
 
                     {!!centerContent && (
-                        <SvgText
-                            x={center}
-                            y={center}
-                            fontSize={contentFontSize}
-                            fontWeight="600"
-                            fill="#333"
-                            textAnchor="middle"
-                            alignmentBaseline="middle"
-                        >
+                        <SvgText x={center} y={center} fontSize={contentFontSize} fontWeight="600" fill="#333" textAnchor="middle" alignmentBaseline="middle">
                             {centerContent}
                         </SvgText>
                     )}

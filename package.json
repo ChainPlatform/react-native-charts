@@ -1,6 +1,6 @@
 {
   "name": "@chainplatform/charts",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Reusable React Native charts for Chain Platform.",
   "main": "src/index.js",
   "devDependencies": {
