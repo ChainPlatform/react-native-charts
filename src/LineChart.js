@@ -31,7 +31,7 @@ class LineChart extends PureComponent {
     };
 
     render() {
-        const { enableTooltip, data, width, height, strokeColor, strokeWidth, showDots, dotRadius, touchRadius, paddingHorizontal, paddingVertical, backgroundColor } = this.props;
+        const { enableTooltip, data, width, height, fillColor, strokeColor, strokeWidth, showDots, dotRadius, touchRadius, paddingHorizontal, paddingVertical, backgroundColor } = this.props;
         const { tooltip } = this.state;
 
         if (!data?.length) return null;
@@ -66,7 +66,7 @@ class LineChart extends PureComponent {
 
                     {points.map((point, index) => (
                         <React.Fragment key={`point-${index}`}>
-                            {showDots && <Circle cx={point.x} cy={point.y} r={dotRadius} fill="#fff" stroke={strokeColor} strokeWidth={setSize(2)} />}
+                            {showDots && <Circle cx={point.x} cy={point.y} r={dotRadius} fill={fillColor} stroke={strokeColor} strokeWidth={setSize(2)} />}
                             <Circle
                                 cx={point.x}
                                 cy={point.y}
@@ -93,6 +93,7 @@ LineChart.propTypes = {
     width: PropTypes.number,
     height: PropTypes.number,
     strokeColor: PropTypes.string,
+    fillColor: PropTypes.string,
     strokeWidth: PropTypes.number,
     showDots: PropTypes.bool,
     dotRadius: PropTypes.number,
@@ -108,6 +109,7 @@ LineChart.defaultProps = {
     width: setSize(160),
     height: setSize(60),
     strokeColor: '#5B7CFA',
+    fillColor: '#FFFFFF',
     strokeWidth: setSize(2),
     showDots: true,
     dotRadius: setSize(3),
