@@ -1,0 +1,30 @@
+{
+  "name": "@chainplatform/charts",
+  "version": "0.0.2",
+  "description": "Reusable React Native charts for Chain Platform.",
+  "main": "src/index.js",
+  "devDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "@chainplatform/layout": "*",
+    "prop-types": "*",
+    "react-native-svg": ">=12.0.0"
+  },
+  "author": "Chain Platform <santran686@gmail.com> (https://chainplatform.net/)",
+  "license": "MIT",
+  "keywords": [
+    "react-native",
+    "charts",
+    "bar-chart",
+    "line-chart",
+    "donut-chart",
+    "chainplatform",
+    "react-native-web"
+  ],
+  "homepage": "https://github.com/ChainPlatform/react-native-charts",
+  "bugs": "https://github.com/ChainPlatform/react-native-charts/issues",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/ChainPlatform/react-native-charts.git"
+  }
+}
